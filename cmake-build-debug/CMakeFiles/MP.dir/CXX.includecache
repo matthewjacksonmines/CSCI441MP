@@ -39,6 +39,10 @@ CSCI441/Camera.hpp
 -
 CSCI441/ArcballCam.hpp
 -
+CSCI441/FreeCam.hpp
+-
+CSCI441/FirstPersonCam.hpp
+-
 CSCI441/OpenGLEngine.hpp
 -
 CSCI441/ShaderProgram.hpp
@@ -99,6 +103,14 @@ glm/gtc/constants.hpp
 -
 glm/gtc/matrix_transform.hpp
 -
+
+/usr/local/include/CSCI441/FirstPersonCam.hpp
+PerspectiveCamera.hpp
+/usr/local/include/CSCI441/PerspectiveCamera.hpp
+
+/usr/local/include/CSCI441/FreeCam.hpp
+PerspectiveCamera.hpp
+/usr/local/include/CSCI441/PerspectiveCamera.hpp
 
 /usr/local/include/CSCI441/OpenGLEngine.hpp
 constants.h

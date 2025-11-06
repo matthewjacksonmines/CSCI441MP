@@ -42,6 +42,9 @@ MPEngine::MPEngine()
       _mousePosition( {MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED} ),
       _leftMouseButtonState(GLFW_RELEASE),
       _arcballCam(nullptr),
+      _freeCam(nullptr),
+      _firstPersonCam(nullptr),
+      _enableFPC(false),
       _cameraSpeed( {0.0f, 0.0f} ),
       _daglas(nullptr),
       _paco(nullptr),
@@ -57,6 +60,8 @@ MPEngine::MPEngine()
 /// Engine destructor
 MPEngine::~MPEngine() {
     delete _arcballCam;
+    delete _freeCam;
+    delete _firstPersonCam;
     delete _daglas;
     delete _paco;
     delete _lightingShaderProgram;
@@ -92,6 +97,18 @@ void MPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
                     _lightingShaderUniformLocations.materialColor
                 );
                 break;
+            // Press P : change the hero controlled by the user
+            case GLFW_KEY_P:
+                changeHero();
+                break;
+            // Press C : change the camera view
+            case GLFW_KEY_C:
+                changeCamera();
+                break;
+            // Press V : enable picture-in-picture first person camera
+            case GLFW_KEY_V:
+                _enableFPC = !_enableFPC;
+                break;
                 // Suppress CLion warning
             default: break;
         }
@@ -126,7 +143,7 @@ void MPEngine::handleCursorPositionEvent(const glm::vec2 currMousePosition) {
     // If the left mouse button is being held down while the mouse is moving.
     if(_leftMouseButtonState == GLFW_PRESS) {
         // Rotate the camera by the distance the mouse moved.
-        _arcballCam->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
+        _camera->rotate((currMousePosition.x - _mousePosition.x) * 0.005f,
                          (_mousePosition.y - currMousePosition.y) * 0.005f );
     }
 
@@ -291,20 +308,20 @@ void MPEngine::_generateEnvironment() {
         for(int j = BOTTOM_END_POINT; j < TOP_END_POINT; j += GRID_SPACING_LENGTH) {
 
             // ----------------------- GRASS GENERATION -----------------------
-            if( i % 2 && j % 2 && getRand() < 0.04f ) {
+            if( i % 2 && j % 2 && getRand() < 0.05f ) {
                 // Move to random position
-                glm::mat4 positionMatrix = glm::translate( glm::mat4(1.0), glm::vec3(i, 0.0f, j) );
+                glm::mat4 positionMatrix = glm::translate( glm::mat4(1.0), glm::vec3(i, -0.35f, j) );
                 // Fixed height
-                GLdouble height = 8.0;
+                GLdouble height = 10.0;
                 // Scaling to grass size
-                glm::mat4 scaleMatrix = glm::scale( glm::mat4(1.0), glm::vec3(1, height, 1) );
+                glm::mat4 scaleMatrix = glm::scale( glm::mat4(1.0), glm::vec3(1, height, 0.3) );
                 // Computing the full model matrix
-                glm::mat4 modelMatrix = scaleMatrix * positionMatrix;
+                glm::mat4 modelMatrix = positionMatrix * scaleMatrix;
                 // Green color
                 glm::vec3 color( 0.275, 0.839, 0.122 );
 
                 // Storing grass properties
-                GrassData newGrass = {modelMatrix, color};
+                GrassData newGrass = {modelMatrix, modelMatrix, color};
                 _grass.emplace_back( newGrass );
             }
 
@@ -350,18 +367,24 @@ void MPEngine::_generateEnvironment() {
  */
 void MPEngine::mSetupScene() {
     _arcballCam = new CSCI441::ArcballCam();
+    _freeCam = new CSCI441::FreeCam();
+    _firstPersonCam = new CSCI441::FirstPersonCam();
 
-    // Orbit around world origin
+    // Initially using the arc-ball camera.
+    _camera = _arcballCam;
+
+    // Arc-ball camera orbit around world origin
     _arcballCam->setTarget(glm::vec3(0.0f, 0.0f, 0.0f));
+
     // Distance from the target
-    _arcballCam->setRadius(30.0f);
+    _camera->setRadius(30.0f);
     // Horizontal angle
-    _arcballCam->setTheta(glm::radians(360.0f));
+    _camera->setTheta(glm::radians(360.0f));
     // Vertical angle
-    _arcballCam->setPhi(glm::radians(60.0f));
-
-    _arcballCam->recomputeOrientation();
-
+    _camera->setPhi(glm::radians(60.0f));
+    // Recalculating camera orientation.
+    _camera->recomputeOrientation();
+    // Camera moving speed
     _cameraSpeed = glm::vec2(0.25f, 0.02f);
     _setLightingParameters();
 
@@ -380,7 +403,8 @@ void MPEngine::mSetupScene() {
     // Initializing the position and size of the heroes.
     for (HeroData& hero : _heroes) {
         glm::mat4 modelMatrix(1.0f);
-        modelMatrix = glm::translate(modelMatrix, hero.heroPosition);
+        glm::vec3 position = {hero.heroPosition.x + 5.0, hero.heroPosition.y, hero.heroPosition.z};
+        modelMatrix = glm::translate(modelMatrix, position);
         modelMatrix = glm::scale(modelMatrix, glm::vec3(5.0f));
         hero.modelMatrix = modelMatrix;
     }
@@ -448,12 +472,16 @@ void MPEngine::mCleanupBuffers() {
 
 /**
  * Scene Cleanup
- * Like good programmers, deletes the arc-ball camera to save memory.
+ * Like good programmers, deletes the cameras to save memory.
  */
 void MPEngine::mCleanupScene() {
     fprintf( stdout, "[INFO]: ...deleting camera..\n" );
     delete _arcballCam;
+    delete _freeCam;
+    delete _firstPersonCam;
     _arcballCam = nullptr;
+    _freeCam = nullptr;
+    _firstPersonCam = nullptr;
 }
 
 //***************************************************************************************
@@ -484,11 +512,14 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
     glDrawElements(GL_TRIANGLE_STRIP, _numGroundPoints, GL_UNSIGNED_SHORT, (void*)0);
 
     /// ---------------------------- DRAWING WORLD ----------------------------
-    /*for( const GrassData& newGrass : _grass ) {
+
+    // Drawing grass
+    for( const GrassData& newGrass : _grass ) {
         drawGrass(newGrass.modelMatrix, newGrass.color, viewMtx, projMtx);
     }
 
-    for( const TreeData& newTree : _trees ) {
+    // Drawing trees
+    /*for( const TreeData& newTree : _trees ) {
         drawTree(newTree, viewMtx, projMtx);
     }*/
 
@@ -496,6 +527,10 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
 
     // Drawing our models, the heroes!!!
     for (int i = 0 ; i < _heroes.size() ; i++) {
+        // Hiding the hero in first-person camera view
+        if (_enableFPC && _firstPersonView && i == heroIndex) {
+            continue;
+        }
         _heroes[i].hero -> drawHero(_heroes[i].modelMatrix, viewMtx, projMtx);
         _heroes[i].hero -> setStop(true);
     }
@@ -516,8 +551,11 @@ void MPEngine::drawGrass(glm::mat4 modelMtx, glm::vec3 color, const glm::mat4 &v
     for (int i = 0 ; i < 3 ; i++) {
         _computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
         _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, color);
-        CSCI441::drawSolidCone( 0.15f, 0.15f, 10, 10 );
-        modelMtx = glm::translate(modelMtx, glm::vec3((i%2==0 ? 0.2f : 0.0f), 0.0f, (i%2==0 ? 0.0f : 0.2f)));
+        float grassHeight = 0.15f;
+        if (i == 1)
+            grassHeight = 0.20f;
+        CSCI441::drawSolidCone( 0.15f, grassHeight, 10, 10 );
+        modelMtx = glm::translate(modelMtx, glm::vec3(0.15f, 0.0f, 0.0f));
     }
 
 }
@@ -561,7 +599,9 @@ void MPEngine::drawTree(const TreeData& tree, const glm::mat4& viewMtx, const gl
  */
 void MPEngine::_updateScene() {
 
-    // Current hero beign controlled by the player.
+    // ----------------------------- HERO PARAMETERS -----------------------------|
+
+    // Current hero being controlled by the player.
     HeroData& currentHero = _heroes[heroIndex];
     glm::mat4 heroModelMatrix(1.0f);
 
@@ -581,24 +621,42 @@ void MPEngine::_updateScene() {
     currentHero.modelMatrix = heroModelMatrix;
     _heroes[heroIndex] = currentHero;
 
+
+    // ----------------------------- CAMERA CONTROLS -----------------------------|
+
     // Press SPACE : zoom
     if( _keys[GLFW_KEY_SPACE] ) {
         // Press SHIFT + SPACE : zoom camera out
         if( _keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT] ) {
-            _arcballCam->moveBackward(_cameraSpeed.x);
+            _camera->moveBackward(_cameraSpeed.x);
         }
         // Press SPACE : zoom camera in
         else {
-            _arcballCam->moveForward(_cameraSpeed.x);
+            _camera->moveForward(_cameraSpeed.x);
         }
     }
 
-    // Toggle to change the current hero being controlled.
-    if ( _keys[GLFW_KEY_P]) {
-        changeHero();
-    }
+    // Updating the first-person camera position by the hero position.
+    glm::vec3 heroPos = _heroes[heroIndex].heroPosition;
+    float yaw = _heroes[heroIndex].heroYaw;
+    float pitch = _heroes[heroIndex].heroPitch;
 
-    // Forward vector to move Daglas.
+    // Initial hero height.
+    float heroHeight = 10.0f;
+
+    // Placing the camera at the height of the hero head.
+    glm::vec3 eyePosition = heroPos + glm::vec3(0.0f, heroHeight * 0.9f, 0.0f);
+
+    // Setting the position and orientation.
+    _firstPersonCam->setPosition(eyePosition);
+    _firstPersonCam->setYaw(yaw);
+    _firstPersonCam->setPitch(pitch);
+    _firstPersonCam->recomputeOrientation();
+
+
+    // ----------------------------- HERO CONTROLS -----------------------------|
+
+    // Forward vector to move our hero.
     glm::vec3 forward = glm::vec3(sin(currentHero.heroYaw), 0.0f, cos(currentHero.heroYaw));
 
     // Press W / up-arrow : Move forward and walk :)
@@ -620,23 +678,34 @@ void MPEngine::_updateScene() {
         currentHero.heroYaw -= 0.05f;
     }
 
-    // [[[[[][[[[[ CONSTANT ANIMATION ]]]]]]]]]]]
-    // [----------- blinking eyes ;-) -----------]
 
+    // [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[ CONSTANT ANIMATIONS ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+
+    // [----------- blinking eyes ;-) -----------]
     // All heroes in the world blink.
     for(int i = 0 ; i < _heroes.size() ; i++) {
         _blink(_heroes[i]);
     }
+
+    // [----------- grass swaying -----------]
+    swayGrass();
+
 
     // Bound checking the hero position.
     _heroes[heroIndex].heroPosition.x = glm::clamp(_heroes[heroIndex].heroPosition.x, -WORLD_SIZE, WORLD_SIZE);
     _heroes[heroIndex].heroPosition.z = glm::clamp(_heroes[heroIndex].heroPosition.z, -WORLD_SIZE, WORLD_SIZE);
 
     // Changing the hero position.
-    _arcballCam->setTarget(_heroes[heroIndex].heroPosition);
-    _arcballCam->recomputeOrientation();
+    if (_camera == _arcballCam) {
+        _arcballCam->setTarget(_heroes[heroIndex].heroPosition);
+        _arcballCam->recomputeOrientation();
+    }
 }
 
+/**
+ * Change Hero
+ * Allows to swap the character being controlled by the player.
+ */
 void MPEngine::changeHero() {
 
     // Saving the current position.
@@ -653,6 +722,16 @@ void MPEngine::changeHero() {
     _heroes[heroIndex].heroPosition = _hero->heroPosition;
 }
 
+/**
+ * Change camera
+ * Moves from the arc-ball camera centered at the hero, to a free camera.
+ */
+void MPEngine::changeCamera() {
+    if (_camera == _arcballCam)
+        _camera = _freeCam;
+    else
+        _camera = _arcballCam;
+}
 
 /**
  * Blinking animation
@@ -673,6 +752,29 @@ void MPEngine::_blink(HeroData& h) {
         // OPEN EYE
         h.hero -> setBlink(false);
         h.lastBlinkTime = currentTime;
+    }
+}
+
+void MPEngine::swayGrass() {
+    float time = glfwGetTime();
+    for (GrassData& g : _grass) {
+        // Grass oscillating angle using a sine wave.
+        float angle = sin(time * 2.0f + g.baseMatrix[3].x + g.baseMatrix[3].z) * 5.0f;
+
+        // Sway matrix that pivots around the bottom.
+        glm::mat4 sway(1.0f);
+
+        // Translating down so the base is at the origin.
+        sway = glm::translate(sway, glm::vec3(0.0f, -1.0f, 0.0f)); // adjust -0.5f to match your blade height
+
+        // Rotating the grass by the angle.
+        sway = glm::rotate(sway, glm::radians(angle), glm::vec3(0,0,1));
+
+        // Translating back up.
+        sway = glm::translate(sway, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        // Updating the model matrix with the animation.
+        g.modelMatrix = g.baseMatrix * sway;
     }
 }
 
@@ -723,7 +825,21 @@ void MPEngine::run() {
         glViewport( 0, 0, framebufferWidth, framebufferHeight );
 
         // Drawing everything to the window.
-        _renderScene(_arcballCam->getViewMatrix(), _arcballCam->getProjectionMatrix());
+        _renderScene(_camera->getViewMatrix(), _camera->getProjectionMatrix());
+
+        if (_enableFPC) {
+            // Updating the viewport for the picture-in-picture first person camera.
+            int pipWidth  = framebufferWidth / 4;
+            int pipHeight = framebufferHeight / 4;
+            int pipX = framebufferWidth - pipWidth - 10;
+            int pipY = 10;
+            glViewport(pipX, pipY, pipWidth, pipHeight);
+            // Drawing everything to the small window, except the hero being controlled.
+            _firstPersonView = true;
+            _renderScene(_firstPersonCam->getViewMatrix(), _firstPersonCam->getProjectionMatrix());
+        }
+        // Flag to hide the controlled hero on the first-person viewport.
+        _firstPersonView = false;
 
         _updateScene();
 
@@ -753,7 +869,7 @@ void MPEngine::_computeAndSendMatrixUniforms(const glm::mat4& modelMtx, const gl
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.normalMatrix, normalMatrix);
 
     // Precomputing and sending the arc-ball camera position.
-    glm::vec3 cameraPosition = _arcballCam->getPosition();
+    glm::vec3 cameraPosition = _camera->getPosition();
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.cameraPosition, cameraPosition);
 
     // Sending the model matrix.

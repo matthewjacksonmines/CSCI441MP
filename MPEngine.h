@@ -3,6 +3,8 @@
 
 #include <CSCI441/Camera.hpp>
 #include <CSCI441/ArcballCam.hpp>
+#include <CSCI441/FreeCam.hpp>
+#include <CSCI441/FirstPersonCam.hpp>
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
 
@@ -85,8 +87,17 @@ private:
     /// Current state of the left mouse button
     GLint _leftMouseButtonState;
 
-    /// Arcball camera in our world
+    /// Current camera being used
+    CSCI441::Camera* _camera;
+
+    /// Arcball camera for each hero in our world
     CSCI441::ArcballCam* _arcballCam;
+
+    /// Free camera to move around the world
+    CSCI441::FreeCam* _freeCam;
+
+    /// First person camera in picture-in-picture
+    CSCI441::FirstPersonCam* _firstPersonCam;
 
     /**
      * Values to store the speed the camera can move/rotate.
@@ -94,6 +105,12 @@ private:
      * y = rotational delta
      */
     glm::vec2 _cameraSpeed;
+
+    /// First person camera enabling flag
+    bool _enableFPC;
+
+    /// First-person viewport render flag
+    bool _firstPersonView;
 
     /// OUR HERO Models
     Hero* _daglas;
@@ -130,11 +147,17 @@ private:
     // Change to next hero
     void changeHero();
 
+    // Change the current camera view
+    void changeCamera();
+
     // Blinking animation
     void _blink(HeroData& hero);
 
     // Walking animation
     void _walk();
+
+    // Grass animation
+    void swayGrass();
 
     /// Size of the world (controls the ground size and locations of objects)
     static constexpr GLfloat WORLD_SIZE = 100.0f;
@@ -150,6 +173,8 @@ private:
 
     /// Grass drawing information
     struct GrassData {
+        /// Fixed position matrix of the grass.
+        glm::mat4 baseMatrix;
         /// Model matrix to translate and scale the grass.
         glm::mat4 modelMatrix;
         /// Color of the grass.

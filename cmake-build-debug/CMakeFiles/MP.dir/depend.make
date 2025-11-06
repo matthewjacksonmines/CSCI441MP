@@ -8,6 +8,8 @@ CMakeFiles/MP.dir/MPEngine.cpp.o: ../heroes/Daglas.h
 CMakeFiles/MP.dir/MPEngine.cpp.o: ../heroes/Paco.h
 CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/ArcballCam.hpp
 CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/Camera.hpp
+CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/FirstPersonCam.hpp
+CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/FreeCam.hpp
 CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/OpenGLEngine.hpp
 CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/OpenGLUtils.hpp
 CMakeFiles/MP.dir/MPEngine.cpp.o: /usr/local/include/CSCI441/PerspectiveCamera.hpp
@@ -571,6 +573,8 @@ CMakeFiles/MP.dir/main.cpp.o: ../heroes/Paco.h
 CMakeFiles/MP.dir/main.cpp.o: ../main.cpp
 CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/ArcballCam.hpp
 CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/Camera.hpp
+CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/FirstPersonCam.hpp
+CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/FreeCam.hpp
 CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/OpenGLEngine.hpp
 CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/OpenGLUtils.hpp
 CMakeFiles/MP.dir/main.cpp.o: /usr/local/include/CSCI441/PerspectiveCamera.hpp

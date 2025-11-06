@@ -9,6 +9,8 @@ CMakeFiles/MP.dir/MPEngine.cpp.o
  /Users/yeyeuknow/University/Computer Graphics/Assignments/MP/heroes/Paco.h
  /usr/local/include/CSCI441/ArcballCam.hpp
  /usr/local/include/CSCI441/Camera.hpp
+ /usr/local/include/CSCI441/FirstPersonCam.hpp
+ /usr/local/include/CSCI441/FreeCam.hpp
  /usr/local/include/CSCI441/OpenGLEngine.hpp
  /usr/local/include/CSCI441/OpenGLUtils.hpp
  /usr/local/include/CSCI441/PerspectiveCamera.hpp
@@ -572,6 +574,8 @@ CMakeFiles/MP.dir/main.cpp.o
  /Users/yeyeuknow/University/Computer Graphics/Assignments/MP/main.cpp
  /usr/local/include/CSCI441/ArcballCam.hpp
  /usr/local/include/CSCI441/Camera.hpp
+ /usr/local/include/CSCI441/FirstPersonCam.hpp
+ /usr/local/include/CSCI441/FreeCam.hpp
  /usr/local/include/CSCI441/OpenGLEngine.hpp
  /usr/local/include/CSCI441/OpenGLUtils.hpp
  /usr/local/include/CSCI441/PerspectiveCamera.hpp
