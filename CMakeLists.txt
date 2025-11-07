@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
 project(MP)
 set(CMAKE_CXX_STANDARD 17)
-set(SOURCE_FILES main.cpp MPEngine.cpp MPEngine.h heroes/Daglas.cpp heroes/Daglas.h Hero.h heroes/Paco.cpp heroes/Paco.h)
+set(SOURCE_FILES main.cpp MPEngine.cpp MPEngine.h Hero.h
+                heroes/Daglas.cpp heroes/Daglas.h  
+                heroes/Paco.cpp heroes/Paco.h 
+                heroes/Darrow.cpp heroes/Darrow.h)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 # Windows with MinGW Installations
@@ -22,8 +25,8 @@ elseif( APPLE AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
 # Blanket *nix Installations
 elseif( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
     # update the include directory location
-    include_directories("/usr/local/include")
+    include_directories("/usr/include")
     # update the lib directory location
-    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/local/lib")
+    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/lib")
     target_link_libraries(${PROJECT_NAME} GL glfw glad)
 endif()

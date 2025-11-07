@@ -9,6 +9,7 @@
 #include "Hero.h"
 #include "heroes/Daglas.h"
 #include "heroes/Paco.h"
+#include "heroes/Darrow.h"
 
 /**
  * *********************** MP - The Alchemist's Guild ***********************
@@ -48,6 +49,8 @@ MPEngine::MPEngine()
       _cameraSpeed( {0.0f, 0.0f} ),
       _daglas(nullptr),
       _paco(nullptr),
+      _darrow(nullptr),
+      _pModel( nullptr ), _objectIndex( 0 ),
       _groundVAO(0),
       _numGroundPoints(0),
       _lightingShaderProgram(nullptr),
@@ -64,6 +67,8 @@ MPEngine::~MPEngine() {
     delete _firstPersonCam;
     delete _daglas;
     delete _paco;
+    delete _darrow;
+    delete _pModel;
     delete _lightingShaderProgram;
 }
 
@@ -87,7 +92,7 @@ void MPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
                 break;
             // Press R : reload the shaders and lighting
             case GLFW_KEY_R:
-                mReloadShaders();
+                //mReloadShaders();
                 _setLightingParameters();
                 // Give Daglas the normal matrix location.
                 _hero->hero -> setProgramUniformLocations(
@@ -235,8 +240,14 @@ void MPEngine::mSetupBuffers() {
                          _lightingShaderUniformLocations.normalMatrix,
                          _lightingShaderUniformLocations.materialColor);
 
+    _darrow = new Darrow(_lightingShaderProgram->getShaderProgramHandle(),
+                         _lightingShaderUniformLocations.mvpMatrix,
+                         _lightingShaderUniformLocations.normalMatrix,
+                         _lightingShaderUniformLocations.materialColor);
+
     _createGroundBuffers();
     _generateEnvironment();
+    
 }
 
 /**
@@ -307,7 +318,7 @@ void MPEngine::_generateEnvironment() {
     for(int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) {
         for(int j = BOTTOM_END_POINT; j < TOP_END_POINT; j += GRID_SPACING_LENGTH) {
 
-            // ----------------------- GRASS GENERATION -----------------------
+            // ----------------pla------- GRASS GENERATION -----------------------
             if( i % 2 && j % 2 && getRand() < 0.05f ) {
                 // Move to random position
                 glm::mat4 positionMatrix = glm::translate( glm::mat4(1.0), glm::vec3(i, -0.35f, j) );
@@ -399,6 +410,7 @@ void MPEngine::mSetupScene() {
     _heroes.reserve(NUMBER_OF_HEROES);
     _heroes.push_back({_daglas, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
     _heroes.push_back({_paco, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
+    _heroes.push_back({_darrow, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
 
     // Initializing the position and size of the heroes.
     for (HeroData& hero : _heroes) {
@@ -468,6 +480,12 @@ void MPEngine::mCleanupBuffers() {
 
     delete _paco;
     _paco = nullptr;
+
+    delete _darrow;
+    _darrow = nullptr;
+
+    delete _pModel;
+    _pModel = nullptr;
 }
 
 /**
@@ -510,6 +528,15 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
 
     glBindVertexArray(_groundVAO);
     glDrawElements(GL_TRIANGLE_STRIP, _numGroundPoints, GL_UNSIGNED_SHORT, (void*)0);
+
+    //Draw hill
+    const glm::mat4 hillModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_SIZE * 0.5, -WORLD_SIZE*0.25f, WORLD_SIZE * 0.5));
+    _computeAndSendMatrixUniforms(hillModelMtx, viewMtx, projMtx);
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, groundColor);
+    
+    CSCI441::drawSolidDome(WORLD_SIZE * 0.5f, 20, 20);
+
+
 
     /// ---------------------------- DRAWING WORLD ----------------------------
 
@@ -605,14 +632,75 @@ void MPEngine::_updateScene() {
     HeroData& currentHero = _heroes[heroIndex];
     glm::mat4 heroModelMatrix(1.0f);
 
-    // Translating our model by its position.
+
     heroModelMatrix = glm::translate(heroModelMatrix, currentHero.heroPosition);
 
+    /** Sphere math
+     *  75% of sphere under plane
+     *  intersections: anywhere y = 0
+     *      theta = 0 -> 2pi
+     *      phi = pi/2
+     *  so hill starts when phi = pi/2 and y = 0
+     *  if phi >= pi/2 and y >= 0: character needs to be at angle phi.
+     *  if hero coordinates are:
+     *      (x - WORLD_SIZE * 0.5)^2 + (z - WORLD_SIZE * 0.5) < (WORLD_SIZE * 0.5)^2 :
+     *          direction vector: <x - WORLD_SIZE*0.5, y - WORLD_SIZE*0.25, z - WORLD_SIZE*0.5>
+     *          change y elevation
+     * 
+     * 
+     *  Method pieced together from a unity forum combined with multiple stackoverflow threads
+     *  because I could not for the life of me get the rotation to work with pitch and yaw:
+     *       Rotate hero relative to surface of sphere:
+     *          Find vector from center of sphere to hero coordinates (position - center) -- Direction
+     *          Take direction vector of hero
+     *          Find forward vector tangential to the surface of the sphere -- forward - dot(forwars, direction) * direction
+     *          Find right vector -- cross(direction, forward)
+     *          Construct rotation matrix
+     * */ 
+    if(pow((currentHero.heroPosition.x - WORLD_SIZE * 0.5f), 2)
+        + pow((currentHero.heroPosition.z - WORLD_SIZE * 0.5f), 2)
+        < pow(WORLD_SIZE * 0.5f, 2)) {
+
+            currentHero.heroPosition.y = -WORLD_SIZE * 0.25f +
+            sqrt(pow(WORLD_SIZE * 0.5f, 2) -
+                (pow((currentHero.heroPosition.x - WORLD_SIZE * 0.5f), 2) +
+                pow((currentHero.heroPosition.z - WORLD_SIZE * 0.5f), 2)));
+            if(currentHero.heroPosition.y < 0.0f){
+                currentHero.heroPosition.y = 0.0f;
+            }
+            if(currentHero.heroPosition.y > 0.0f){
+                glm::vec3 up = glm::vec3(currentHero.heroPosition.x - WORLD_SIZE * 0.5f,
+                                                currentHero.heroPosition.y + WORLD_SIZE * 0.25f,
+                                                currentHero.heroPosition.z - WORLD_SIZE * 0.5f);
+                up = glm::normalize(up);
+                
+                glm::vec3 forwardVec = glm::vec3(sin(currentHero.heroYaw), 0.0f, cos(currentHero.heroYaw));
+                glm::vec3 tanVec = glm::normalize(forwardVec - glm::dot(forwardVec, up) * up);
+                glm::vec3 rightVec = glm::normalize(glm::cross(up, tanVec));
+
+                glm::mat4 rotationMat = glm::mat4(glm::vec4(rightVec, 0.0f),
+                                                glm::vec4(up, 0.0f),
+                                                glm::vec4(tanVec, 0.0f),
+                                                glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+                
+                heroModelMatrix = heroModelMatrix * rotationMat;
+            }
+            else{
+                // Rotating our model in the Y-axis by the hero yaw (theta) in the arc-ball camera.
+                heroModelMatrix = glm::rotate(heroModelMatrix, currentHero.heroYaw, CSCI441::Y_AXIS );
+
+                // Rotating our model in the X-axis by the hero pitch (phi) in the arc-ball camera.
+                heroModelMatrix = glm::rotate(heroModelMatrix, currentHero.heroPitch, CSCI441::X_AXIS );
+                }
+    }
+    else{
     // Rotating our model in the Y-axis by the hero yaw (theta) in the arc-ball camera.
     heroModelMatrix = glm::rotate(heroModelMatrix, currentHero.heroYaw, CSCI441::Y_AXIS );
 
     // Rotating our model in the X-axis by the hero pitch (phi) in the arc-ball camera.
     heroModelMatrix = glm::rotate(heroModelMatrix, currentHero.heroPitch, CSCI441::X_AXIS );
+    }
+
 
     // Scaling our model to make it bigger.
     heroModelMatrix = glm::scale(heroModelMatrix, glm::vec3(5.0f));
@@ -893,7 +981,8 @@ void mp_engine_keyboard_callback(GLFWwindow *window, int key, int scancode, int 
 }
 
 /**
- * Cursor Callback Function
+ * Cursor Callback Function    void _drawCheeks(const bool leftCheek, glm::mat4 modelMtx, const glm::mat4& viewMtx, const glm::mat4& projMtx ) const;
+
  * Creates the engine from the window and calls the cursor handler.
  */
 void mp_engine_cursor_callback(GLFWwindow *window, double x, double y ) {

@@ -1,0 +1,3 @@
+/home/latea/Desktop/Fall-25/CompGraphics/CSCI441MP/CMakeFiles/MP.dir
+/home/latea/Desktop/Fall-25/CompGraphics/CSCI441MP/CMakeFiles/edit_cache.dir
+/home/latea/Desktop/Fall-25/CompGraphics/CSCI441MP/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/MP.dir/main.cpp.o CMakeFiles/MP.dir/MPEngine.cpp.o CMakeFiles/MP.dir/heroes/Daglas.cpp.o CMakeFiles/MP.dir/heroes/Paco.cpp.o CMakeFiles/MP.dir/heroes/Darrow.cpp.o -o MP  -lGL -lglfw -lglad

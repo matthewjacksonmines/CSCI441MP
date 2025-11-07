@@ -11,6 +11,7 @@
 #include "Hero.h"
 #include "heroes/Daglas.h"
 #include "heroes/Paco.h"
+#include"heroes/Darrow.h"
 
 #include <vector>
 
@@ -115,6 +116,10 @@ private:
     /// OUR HERO Models
     Hero* _daglas;
     Hero* _paco;
+    Hero* _darrow;
+
+    CSCI441::ModelLoader* _pModel;
+    GLuint _objectIndex;
 
     /// Information for each hero
     struct HeroData {
