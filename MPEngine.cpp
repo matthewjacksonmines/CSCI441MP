@@ -10,6 +10,10 @@
 #include "heroes/Daglas.h"
 #include "heroes/Paco.h"
 #include "heroes/Darrow.h"
+#include "heroes/Petre.h"
+
+// stb for texture loading (skybox)
+#include <stb_image.h>
 
 /**
  * *********************** MP - The Alchemist's Guild ***********************
@@ -50,6 +54,7 @@ MPEngine::MPEngine()
       _daglas(nullptr),
       _paco(nullptr),
       _darrow(nullptr),
+      _petre(nullptr),
       _pModel( nullptr ), _objectIndex( 0 ),
       _groundVAO(0),
       _numGroundPoints(0),
@@ -68,8 +73,16 @@ MPEngine::~MPEngine() {
     delete _daglas;
     delete _paco;
     delete _darrow;
+    delete _petre;
     delete _pModel;
     delete _lightingShaderProgram;
+
+    // --- skybox cleanup (new) --- COULD ALSO GO IN mCleanupShaders
+    if(_skyCubemap) glDeleteTextures(1, &_skyCubemap);
+    if(_skyVAO)     glDeleteVertexArrays(1, &_skyVAO);
+    if(_skyVBO)     glDeleteBuffers(1, &_skyVBO);
+    if(_skyIBO)     glDeleteBuffers(1, &_skyIBO);
+    delete _skyboxProg;
 }
 
 /**
@@ -218,6 +231,10 @@ void MPEngine::mSetupShaders() {
     // Vertex Normal
     _lightingShaderAttributeLocations.vertexNormal = _lightingShaderProgram->getAttributeLocation("vertexNormal");
 
+    // --------------------------- SKYBOX SHADER (new, separate program) ---------------------------
+    _skyboxProg = new CSCI441::ShaderProgram("shaders/skybox.v.glsl", "shaders/skybox.f.glsl");
+    _skyU.uVP   = _skyboxProg->getUniformLocation("uVP");
+    _skyU.uCube = _skyboxProg->getUniformLocation("uCube");
 }
 
 /**
@@ -243,11 +260,18 @@ void MPEngine::mSetupBuffers() {
     _darrow = new Darrow(_lightingShaderProgram->getShaderProgramHandle(),
                          _lightingShaderUniformLocations.mvpMatrix,
                          _lightingShaderUniformLocations.normalMatrix,
+                         _lightingShaderUniformLocations.materialColor);   
+
+    _petre = new Petre(_lightingShaderProgram->getShaderProgramHandle(),
+                         _lightingShaderUniformLocations.mvpMatrix,
+                         _lightingShaderUniformLocations.normalMatrix,
                          _lightingShaderUniformLocations.materialColor);
 
     _createGroundBuffers();
     _generateEnvironment();
     
+    // ---------- SKYBOX GEOMETRY (new) ----------
+    _setupSkybox();
 }
 
 /**
@@ -411,6 +435,7 @@ void MPEngine::mSetupScene() {
     _heroes.push_back({_daglas, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
     _heroes.push_back({_paco, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
     _heroes.push_back({_darrow, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
+    _heroes.push_back({_petre, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
 
     // Initializing the position and size of the heroes.
     for (HeroData& hero : _heroes) {
@@ -483,6 +508,9 @@ void MPEngine::mCleanupBuffers() {
 
     delete _darrow;
     _darrow = nullptr;
+    
+    delete _petre;
+    _petre = nullptr;
 
     delete _pModel;
     _pModel = nullptr;
@@ -514,6 +542,9 @@ void MPEngine::mCleanupScene() {
  * @param projMtx : Projection matrix used by the drawing functions to go from eye space to clip space.
  */
 void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) const {
+    // ---------------------- SKYBOX FIRST (new) ----------------------
+    _drawSkybox(viewMtx, projMtx);
+
     // use our lighting shader program
     _lightingShaderProgram->useProgram();
 
@@ -546,9 +577,9 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
     }
 
     // Drawing trees
-    /*for( const TreeData& newTree : _trees ) {
-        drawTree(newTree, viewMtx, projMtx);
-    }*/
+    // /*for( const TreeData& newTree : _trees ) {
+    //     drawTree(newTree, viewMtx, projMtx);
+    // }*/
 
     /// ---------------------------- DRAWING HEROES ----------------------------
 
@@ -934,6 +965,110 @@ void MPEngine::run() {
         glfwSwapBuffers(mpWindow);      // flush the OpenGL commands and make sure they get rendered!
         glfwPollEvents();               // check for any events and signal to redraw screen
     }
+}
+
+
+// ============================= SKYBOX IMPLEMENTATION (new) =============================
+void MPEngine::_setupSkybox() {
+    // unit cube (positions only) (we could also just generate this if we think this is too ugly)
+    const glm::vec3 verts[] = {
+        {-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1},
+        { 1,-1,-1}, {-1,-1,-1}, {-1, 1,-1}, { 1, 1,-1},
+        {-1, 1, 1}, { 1, 1, 1}, { 1, 1,-1}, {-1, 1,-1},
+        {-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1},
+        {-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1},
+        { 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1},
+    };
+    const GLushort idx[] = {
+        0,1,2,      2,3,0,
+        4,5,6,      6,7,4,
+        8,9,10,     10,11,8,
+        12,13,14,   14,15,12,
+        16,17,18,   18,19,16,
+        20,21,22,   22,23,20
+    };
+    _skyIndexCount = sizeof(idx)/sizeof(GLushort);
+
+    glGenVertexArrays(1, &_skyVAO);
+    glBindVertexArray(_skyVAO);
+    glGenBuffers(1, &_skyVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, _skyVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+    glGenBuffers(1, &_skyIBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _skyIBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, GL_STATIC_DRAW);
+
+    // position at location 0 for skybox shader
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
+    // load cubemap images
+    std::vector<std::string> faces = {
+        "assets/skybox/right.jpg",
+        "assets/skybox/left.jpg",
+        "assets/skybox/top.jpg",
+        "assets/skybox/bottom.jpg",
+        "assets/skybox/front.jpg",
+        "assets/skybox/back.jpg"
+    };
+    _loadSkyboxCubemap(faces);
+}
+
+
+/// @brief Load the 
+/// @param faces 
+void MPEngine::_loadSkyboxCubemap(const std::vector<std::string>& faces) {
+    glGenTextures(1, &_skyCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, _skyCubemap);
+
+    // For cubemaps, DO NOT flip vertically
+    stbi_set_flip_vertically_on_load(false);
+
+    int w=0,h=0,c=0;
+    for (GLuint i = 0; i < 6; ++i) {
+        unsigned char* data = stbi_load(faces[i].c_str(), &w, &h, &c, 0);
+        if(data) {
+            const GLint STORAGE = (c == 4 ? GL_RGBA : GL_RGB);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, STORAGE, w, h, 0, STORAGE, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        } else {
+            std::fprintf(stderr, "[ERROR]: Could not load cubemap face \"%s\"\n", faces[i].c_str());
+        }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // Make sure the map spans the whole face
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    std::fprintf(stdout, "[INFO]: Cubemap loaded (handle %u)\n", _skyCubemap);
+}
+
+void MPEngine::_drawSkybox(const glm::mat4& viewMtx, const glm::mat4& projMtx) const {
+    if(!_skyboxProg || !_skyCubemap) return; // Probably wont happen
+
+    // View matrix without translation so the skybox stays centered
+    glm::mat4 V = glm::mat4(glm::mat3(viewMtx));
+    glm::mat4 VP = projMtx*V;
+
+    // Depth state for skybox
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+
+    _skyboxProg->useProgram();
+    _skyboxProg->setProgramUniform(_skyU.uVP, VP);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, _skyCubemap);
+    _skyboxProg->setProgramUniform(_skyU.uCube, 0);
+
+    glBindVertexArray(_skyVAO);
+    glDrawElements(GL_TRIANGLES, _skyIndexCount, GL_UNSIGNED_SHORT, (void*)0);
+
+    // restore
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
 }
 
 //**********************************************************************************

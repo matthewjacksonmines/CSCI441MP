@@ -1,32 +1,38 @@
 cmake_minimum_required(VERSION 3.14)
 project(MP)
 set(CMAKE_CXX_STANDARD 17)
-set(SOURCE_FILES main.cpp MPEngine.cpp MPEngine.h Hero.h
-                heroes/Daglas.cpp heroes/Daglas.h  
-                heroes/Paco.cpp heroes/Paco.h 
-                heroes/Darrow.cpp heroes/Darrow.h)
+
+# Automatically gather source files
+file(GLOB_RECURSE SOURCE_FILES
+    "${CMAKE_SOURCE_DIR}/main.cpp"
+    "${CMAKE_SOURCE_DIR}/MPEngine.cpp"
+    "${CMAKE_SOURCE_DIR}/MPEngine.h"
+    "${CMAKE_SOURCE_DIR}/Hero.h"
+    "${CMAKE_SOURCE_DIR}/heroes/*.cpp"
+    "${CMAKE_SOURCE_DIR}/heroes/*.h"
+    "${CMAKE_SOURCE_DIR}/include/*.h"
+    "${CMAKE_SOURCE_DIR}/include/*.cpp"
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
-# Windows with MinGW Installations
+# Add include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/heroes
+)
+
+# Platform-specific configuration
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND MINGW )
-    # if working on Windows but not in the lab
-    # update the include directory location
-    include_directories("Z:/CSCI441/include")
-    # update the lib directory location
-    target_link_directories(${PROJECT_NAME} PUBLIC "Z:/CSCI441/lib")
+    include_directories("C:/MinGW/include/CSCI441")
+    target_link_directories(${PROJECT_NAME} PUBLIC "C:/MinGW/include/CSCI441")
     target_link_libraries(${PROJECT_NAME} opengl32 glfw3 glad gdi32)
-# OS X Installations
 elseif( APPLE AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
-    # update the include directory location
     include_directories("/usr/local/include")
-    # update the lib directory location
     target_link_directories(${PROJECT_NAME} PUBLIC "/usr/local/lib")
     target_link_libraries(${PROJECT_NAME} "-framework OpenGL" "-framework Cocoa" "-framework IOKit" "-framework CoreVideo" glfw3 glad)
-# Blanket *nix Installations
 elseif( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-    # update the include directory location
-    include_directories("/usr/include")
-    # update the lib directory location
-    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/lib")
+    include_directories("/usr/local/include")
+    target_link_directories(${PROJECT_NAME} PUBLIC "/usr/local/lib")
     target_link_libraries(${PROJECT_NAME} GL glfw glad)
 endif()

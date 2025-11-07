@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run active dir (gdb, MinGW)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${fileDirname}/build/${fileDirnameBasename}.exe",
+      "cwd": "${fileDirname}",
+      "preLaunchTask": "Build active dir (MinGW)",
+      "postDebugTask": "Kill active exe (win)",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "externalConsole": false,
+      "stopAtEntry": false
+    }
+  ]
+}

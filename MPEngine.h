@@ -117,6 +117,7 @@ private:
     Hero* _daglas;
     Hero* _paco;
     Hero* _darrow;
+    Hero* _petre;
 
     CSCI441::ModelLoader* _pModel;
     GLuint _objectIndex;
@@ -249,6 +250,27 @@ private:
 
     // Matrix uniform computation and sending to the shader program.
     void _computeAndSendMatrixUniforms(const glm::mat4& modelMtx, const glm::mat4& viewMtx, const glm::mat4& projMtx) const;
+
+
+    // ========================= SKYBOX ADDITIONS (new) =========================
+    // separate shader for cubemap skybox
+    CSCI441::ShaderProgram* _skyboxProg = nullptr;
+    struct SkyU {
+        GLint uVP;     // mat4
+        GLint uCube;   // samplerCube
+    } _skyU{};
+
+    // cube geometry (unit cube)
+    GLuint _skyVAO = 0, _skyVBO = 0, _skyIBO = 0;
+    GLsizei _skyIndexCount = 0;
+
+    // cubemap texture handle
+    GLuint _skyCubemap = 0;
+
+    // helpers
+    void _setupSkybox(); // create VAO/VBO/IBO and shader
+    void _loadSkyboxCubemap(const std::vector<std::string>& faces);
+    void _drawSkybox(const glm::mat4& viewMtx, const glm::mat4& projMtx) const;
 };
 
 // Keyboard callback
