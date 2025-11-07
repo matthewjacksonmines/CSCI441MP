@@ -67,7 +67,7 @@ layout(location = 1) in vec3 vertexNormal;
 // ------------------------ Varying outputs ------------------------|
 
 // Color to apply to this vertex
-out vec3 color;
+layout(location = 0) out vec3 color;
 
 
 void main() {
