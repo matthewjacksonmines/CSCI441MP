@@ -1,3 +1,0 @@
-"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\MP.dir/objects.a
-C:\MinGW\bin\ar.exe qc CMakeFiles\MP.dir/objects.a @CMakeFiles\MP.dir\objects1.rsp
-C:\MinGW\bin\c++.exe -Wl,--whole-archive CMakeFiles\MP.dir/objects.a -Wl,--no-whole-archive -o MP.exe -Wl,--out-implib,libMP.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\MP.dir\linkLibs.rsp

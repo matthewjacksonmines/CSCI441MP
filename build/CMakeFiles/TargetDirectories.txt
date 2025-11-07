@@ -1,3 +1,0 @@
-D:/Code/SCHOOL/Computer Graphics/MP/build/CMakeFiles/MP.dir
-D:/Code/SCHOOL/Computer Graphics/MP/build/CMakeFiles/edit_cache.dir
-D:/Code/SCHOOL/Computer Graphics/MP/build/CMakeFiles/rebuild_cache.dir
