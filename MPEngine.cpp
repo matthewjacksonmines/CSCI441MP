@@ -89,7 +89,7 @@ void MPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
             case GLFW_KEY_R:
                 mReloadShaders();
                 _setLightingParameters();
-                // Give Daglas the normal matrix location.
+                // Give the hero the normal matrix location.
                 _hero->hero -> setProgramUniformLocations(
                     _lightingShaderProgram->getShaderProgramHandle(),
                     _lightingShaderUniformLocations.mvpMatrix,
@@ -191,23 +191,49 @@ void MPEngine::mSetupShaders() {
     // Shader program
     _lightingShaderProgram = new CSCI441::ShaderProgram("shaders/mp.v.glsl", "shaders/mp.f.glsl" );
 
-    // --------------------------------------------- UNIFORMS ---------------------------------------------
+    // --------------------------------------------- UNIFORMS ---------------------------------------------|
+
+    // ============ MATRICES ============|
     // MVP matrix
     _lightingShaderUniformLocations.mvpMatrix = _lightingShaderProgram->getUniformLocation("mvpMatrix");
-    // Material Color
-    _lightingShaderUniformLocations.materialColor = _lightingShaderProgram->getUniformLocation("materialColor");
-    // Normal Matrix
-    _lightingShaderUniformLocations.normalMatrix = _lightingShaderProgram->getUniformLocation("normalMatrix");
-    // Light Direction
-    _lightingShaderUniformLocations.lightDirection = _lightingShaderProgram->getUniformLocation("lightDirection");
-    // Light Color
-    _lightingShaderUniformLocations.lightColor = _lightingShaderProgram->getUniformLocation("lightColor");
-    // Camera Position
-    _lightingShaderUniformLocations.cameraPosition = _lightingShaderProgram->getUniformLocation("cameraPos");
     // Model matrix
     _lightingShaderUniformLocations.modelMatrix = _lightingShaderProgram->getUniformLocation("modelMatrix");
+    // Normal Matrix
+    _lightingShaderUniformLocations.normalMatrix = _lightingShaderProgram->getUniformLocation("normalMatrix");
 
-    // --------------------------------------------- ATTRIBUTES ---------------------------------------------
+    // ============ MATERIAL ============|
+    // Material Color
+    _lightingShaderUniformLocations.materialColor = _lightingShaderProgram->getUniformLocation("materialColor");
+
+    // ============ DIRECTIONAL LIGHT ============|
+
+    // Directional light direction
+    _lightingShaderUniformLocations.dir_lightDirection = _lightingShaderProgram->getUniformLocation("directional_lightDirection");
+    // Directional light color
+    _lightingShaderUniformLocations.dir_lightColor = _lightingShaderProgram->getUniformLocation("directional_lightColor");
+
+    // ============ POINT LIGHT ============|
+
+    // Point light position
+    _lightingShaderUniformLocations.point_lightPosition = _lightingShaderProgram->getUniformLocation("point_lightPosition");
+    // Point light Color
+    _lightingShaderUniformLocations.point_lightColor = _lightingShaderProgram->getUniformLocation("point_lightColor");
+
+    // ============ SPOTLIGHT ============|
+
+    // Spotlight position
+    _lightingShaderUniformLocations.spot_lightPosition = _lightingShaderProgram->getUniformLocation("spot_lightPosition");
+    // Spotlight direction
+    _lightingShaderUniformLocations.spot_lightDirection = _lightingShaderProgram->getUniformLocation("spot_lightDirection");
+    // Spotlight color
+    _lightingShaderUniformLocations.spot_lightColor = _lightingShaderProgram->getUniformLocation("spot_lightColor");
+
+
+    // Camera Position
+    _lightingShaderUniformLocations.cameraPosition = _lightingShaderProgram->getUniformLocation("cameraPos");
+
+
+    // --------------------------------------------- ATTRIBUTES ---------------------------------------------|
     // Vertex Position
     _lightingShaderAttributeLocations.vPos = _lightingShaderProgram->getAttributeLocation("vPos");
     // Vertex Normal
@@ -366,15 +392,31 @@ void MPEngine::_generateEnvironment() {
  * Camera position, radius, orientation and speed, and hero position.
  */
 void MPEngine::mSetupScene() {
+    // Initializing the different cameras
     _arcballCam = new CSCI441::ArcballCam();
     _freeCam = new CSCI441::FreeCam();
     _firstPersonCam = new CSCI441::FirstPersonCam();
+
+    // Calculating the window aspect ratio
+    GLint framebufferWidth, framebufferHeight;
+    glfwGetFramebufferSize( mpWindow, &framebufferWidth, &framebufferHeight );
+    float aspectRatio = static_cast<float> (framebufferWidth) / framebufferHeight;
+
+    // Setting the actual window aspect ratio to all cameras.
+    _arcballCam->setAspectRatio(aspectRatio);
+    _freeCam->setAspectRatio(aspectRatio);
+    _firstPersonCam->setAspectRatio(aspectRatio);
 
     // Initially using the arc-ball camera.
     _camera = _arcballCam;
 
     // Arc-ball camera orbit around world origin
     _arcballCam->setTarget(glm::vec3(0.0f, 0.0f, 0.0f));
+
+    // Positioning the free cam away from the grid.
+    _freeCam->setPosition(glm::vec3(0.0f, 20.0f, 20.0f));
+    _freeCam->recomputeOrientation();
+
 
     // Distance from the target
     _camera->setRadius(30.0f);
@@ -419,19 +461,57 @@ void MPEngine::mSetupScene() {
  * Configures the lighting parameters used by our shaders program, light direction and color.
  */
 void MPEngine::_setLightingParameters() {
-    // Lighting uniforms
-    glm::vec3 lightDirection = {-1, -1, -1};
-    glm::vec3 lightColor = {1, 1, 1};
 
-    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(), // Program handle
-                        _lightingShaderUniformLocations.lightDirection,   // Uniform location
-                        1,                                                // Number of elements
-                        glm::value_ptr(lightDirection));              //  Start of the data
+    // ------- Lighting uniforms -------
 
-    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(), // Program handle
-                        _lightingShaderUniformLocations.lightColor,       // Uniform location
-                        1,                                                // Number of elements
-                        glm::value_ptr(lightColor));                   //  Start of the data
+    // Directional light
+    glm::vec3 dir_lightDirection = {-1, -1, -1}; // Normalized vector
+    glm::vec3 dir_lightColor = {1.0, 1.0, 1.0}; // White light
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),   // Program handle
+                        _lightingShaderUniformLocations.dir_lightDirection, // Uniform location
+                        1,                                                  // Number of elements
+                        glm::value_ptr(dir_lightDirection));             //  Start of the data
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),   // Program handle
+                        _lightingShaderUniformLocations.dir_lightColor,     // Uniform location
+                        1,                                                  // Number of elements
+                        glm::value_ptr(dir_lightColor));                 // Start of the data
+
+    // Point light
+    sunPosition = {0.0f, 50.0f, 50.0f};
+    glm::vec3 point_lightPosition = sunPosition; // Position of our sun
+    glm::vec3 point_lightColor = {1, 0.882, 0.765}; // Orange light
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),    // Program handle
+                        _lightingShaderUniformLocations.point_lightPosition, // Uniform location
+                        1,                                                   // Number of elements
+                        glm::value_ptr(point_lightPosition));             //  Start of the data
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),    // Program handle
+                        _lightingShaderUniformLocations.point_lightColor,    // Uniform location
+                        1,                                                   // Number of elements
+                        glm::value_ptr(point_lightColor));                // Start of the data
+
+    // Spotlight
+    glm::vec3 spot_lightPosition = {0.0, 15.0, 0.0};
+    glm::vec3 spot_lightDirection = {0, -1, 0};
+    glm::vec3 spot_lightColor = {1, 0.8, 0.8};
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),    // Program handle
+                        _lightingShaderUniformLocations.spot_lightPosition,  // Uniform location
+                        1,                                                   // Number of elements
+                        glm::value_ptr(spot_lightPosition));             //  Start of the data
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),    // Program handle
+                        _lightingShaderUniformLocations.spot_lightDirection, // Uniform location
+                        1,                                                   // Number of elements
+                        glm::value_ptr(spot_lightDirection));             // Start of the data
+
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),    // Program handle
+                        _lightingShaderUniformLocations.spot_lightColor,     // Uniform location
+                        1,                                                   // Number of elements
+                        glm::value_ptr(spot_lightColor));                 // Start of the data
 
 }
 
@@ -513,9 +593,11 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
 
     /// ---------------------------- DRAWING WORLD ----------------------------
 
+    drawSun(viewMtx, projMtx);
+
     // Drawing grass
     for( const GrassData& newGrass : _grass ) {
-        drawGrass(newGrass.modelMatrix, newGrass.color, viewMtx, projMtx);
+        drawGrass(newGrass.color, newGrass.modelMatrix, viewMtx, projMtx);
     }
 
     // Drawing trees
@@ -538,16 +620,98 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
 }
 
 /**
- * Grass Drawing
- * Helper function to draw the grass generated previously.
- * It draws three green cones close together.
- * @param modelMtx : Model matrix to perform transformations.
- * @param color : color of the grass.
+ * Sun Drawing
+ * Helper function to draw a beautiful sun to light our world
+ * It draws a big sphere
  * @param viewMtx : View matrix from the scene rendering.
  * @param projMtx : Projection matrix from the scene rendering.
  */
-void MPEngine::drawGrass(glm::mat4 modelMtx, glm::vec3 color, const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
+void MPEngine::drawSun(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
 
+    // Sun sphere:
+    glm::mat4 sunModelMtx = glm::translate(glm::mat4(1.0f), sunPosition);
+    sunModelMtx = glm::scale(sunModelMtx, glm::vec3(5.0f));
+    _computeAndSendMatrixUniforms(sunModelMtx, viewMtx, projMtx);
+    glm::vec3 brightOrange(1.0f, 0.72f, 0.0f);
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, brightOrange);
+    CSCI441::drawSolidSphere(1.0f, 40, 40);
+
+    // Bean in the +X axis
+    drawBeam(viewMtx, projMtx,
+             glm::vec3(1, 0, 0),
+             glm::vec3(0, 0, 1),
+             glm::radians(-90.0f));
+
+    // Bean in the -X axis
+    drawBeam(viewMtx, projMtx,
+             glm::vec3(-1, 0, 0),
+             glm::vec3(0, 0, 1),
+             glm::radians(90.0f));
+
+    // Bean in the +Y axis
+    drawBeam(viewMtx, projMtx,
+             glm::vec3(0, 1, 0),
+             glm::vec3(1, 0, 0),
+             glm::radians(0.0f));
+
+    // Bean in the -Y axis
+    drawBeam(viewMtx, projMtx,
+             glm::vec3(0, -1, 0),
+             glm::vec3(1, 0, 0),
+             glm::radians(180.0f));
+
+    // Bean in the +Z axis
+    drawBeam(viewMtx, projMtx,
+             glm::vec3(0, 0, 1),
+             glm::vec3(1, 0, 0),
+             glm::radians(90.0f));
+
+    // Bean in the -Z axis
+    drawBeam(viewMtx, projMtx,
+             glm::vec3(0, 0, -1),
+             glm::vec3(1, 0, 0),
+             glm::radians(-90.0f));
+
+}
+
+/**
+ * Beam Drawing
+ * @param viewMtx : View matrix from the scene rendering.
+ * @param projMtx : Projection matrix from the scene rendering.
+ * @param dirAxis : direction axis where the beam is facing.
+ * @param rotAxis : rotation axis to orient the beam outwards.
+ * @param rotAngle : rotation angle to rotate the cone.
+ */
+void MPEngine::drawBeam(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
+                        glm::vec3 dirAxis, glm::vec3 rotAxis, float rotAngle) const {
+    // Beam separation from the sphere.
+    float beamOffset = 5.5;
+
+    // Moving, rotating and scaling the cone.
+    glm::mat4 beamModelMtx = glm::translate(glm::mat4(1.0f), sunPosition + dirAxis * beamOffset);
+    beamModelMtx = glm::rotate(beamModelMtx, rotAngle, rotAxis);
+    beamModelMtx = glm::scale(beamModelMtx, glm::vec3(2.0f, 15.0f, 2.0f));
+
+    // Sending the cone to the shader and drawing.
+    _computeAndSendMatrixUniforms(beamModelMtx, viewMtx, projMtx);
+    glm::vec3 brightYellow(1.0f, 0.83f, 0.0f);
+    _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, brightYellow);
+    CSCI441::drawSolidCone(0.5f, 0.3f, 20, 20);
+}
+
+
+/**
+ * Grass Drawing
+ * Helper function to draw the grass generated previously.
+ * It draws three green cones close together.
+ * @param color : color of the grass.
+ * @param modelMtx : Model matrix to perform transformations.
+ * @param viewMtx : View matrix from the scene rendering.
+ * @param projMtx : Projection matrix from the scene rendering.
+ */
+void MPEngine::drawGrass(glm::vec3 color, glm::mat4 modelMtx, const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
+
+    // Three flat cones close together and the middle one is taller.
     for (int i = 0 ; i < 3 ; i++) {
         _computeAndSendMatrixUniforms(modelMtx, viewMtx, projMtx);
         _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, color);
@@ -782,9 +946,9 @@ void MPEngine::swayGrass() {
  * Walking animation
  * Using booleans and time, changes the hero legs position each 0.3 seconds,
  * only when moving forwards or backwards.
- * Stop : when Daglas is not moving
- * Walk-left : to move Daglas' left leg.
- * Walk-right : to move Daglas' right leg.
+ * Stop : when the hero is not moving
+ * Walk-left : to move hero's left leg.
+ * Walk-right : to move hero's right leg.
  */
 void MPEngine::_walk() {
     double currentTime = glfwGetTime();

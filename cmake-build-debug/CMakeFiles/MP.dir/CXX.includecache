@@ -76,14 +76,6 @@ glm/gtc/constants.hpp
 ../Hero.h
 /Users/yeyeuknow/University/Computer Graphics/Assignments/MP/Hero.h
 
-/Users/yeyeuknow/University/Computer Graphics/Assignments/MP/main.cpp
-MPEngine.h
-/Users/yeyeuknow/University/Computer Graphics/Assignments/MP/MPEngine.h
-stb_image.h
--
-stb_image_write.h
--
-
 /usr/local/include/CSCI441/ArcballCam.hpp
 PerspectiveCamera.hpp
 /usr/local/include/CSCI441/PerspectiveCamera.hpp
@@ -1683,38 +1675,6 @@ detail/setup.hpp
 /usr/local/include/glm/detail/setup.hpp
 detail/func_vector_relational.inl
 /usr/local/include/glm/detail/func_vector_relational.inl
-
-/usr/local/include/stb_image.h
-stb_image.h
-/usr/local/include/stb_image.h
-stdio.h
--
-stdlib.h
--
-stdarg.h
--
-stddef.h
--
-stdlib.h
--
-string.h
--
-limits.h
--
-math.h
--
-stdio.h
--
-assert.h
--
-stdint.h
--
-emmintrin.h
--
-intrin.h
--
-arm_neon.h
--
 
 /usr/local/include/stb_image_write.h
 stdlib.h

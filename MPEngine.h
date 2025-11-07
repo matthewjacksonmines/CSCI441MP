@@ -202,8 +202,18 @@ private:
     // Environment generation
     void _generateEnvironment();
 
+    /// Sun coordinates in our world
+    glm::vec3 sunPosition;
+
+    // Sun drawing function
+    void drawSun(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const;
+
+    void drawBeam(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
+                  glm::vec3 dirAxis, glm::vec3 rotAxis, float rotAngle) const;
+
+
     // Grass drawing function
-    void drawGrass(glm::mat4 modelMtx, glm::vec3 color, const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const;
+    void drawGrass(glm::vec3 color, glm::mat4 modelMtx, const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const;
 
     // Tree drawing function
     void drawTree(const TreeData& tree, const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const;
@@ -215,18 +225,34 @@ private:
     struct LightingShaderUniformLocations {
         /// Precomputed MVP matrix location
         GLint mvpMatrix;
-        /// Material diffuse color location
-        GLint materialColor;
-        /// Normal matrix location
-        GLint normalMatrix;
-        /// Light direction location (for Phong Illumination)
-        GLint lightDirection;
-        /// Light color location
-        GLint lightColor;
-        /// Camera position location (for Specular Illumination)
-        GLint cameraPosition;
         /// Model matrix location
         GLint modelMatrix;
+        /// Normal matrix location
+        GLint normalMatrix;
+
+        /// Material diffuse color location
+        GLint materialColor;
+
+        /// Directional light direction location
+        GLint dir_lightDirection;
+        /// Directional light color location
+        GLint dir_lightColor;
+
+        /// Point light position location
+        GLint point_lightPosition;
+        /// Point light color location
+        GLint point_lightColor;
+
+        /// Spotlight position location
+        GLint spot_lightPosition;
+        /// Spotlight direction location
+        GLint spot_lightDirection;
+        /// Spotlight color location
+        GLint spot_lightColor;
+
+        /// Camera position location
+        GLint cameraPosition;
+
 
     } _lightingShaderUniformLocations;
 
