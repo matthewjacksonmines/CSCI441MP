@@ -1,4 +1,8 @@
-Gallant Graphics
+Gallant Graphics:
+ - Santi Hevia
+ - Jacob Yates
+ - Matt Jackson
+ - Ben Gill
 
 Fall 2025 - MP - The Alchemist's Guild
 
@@ -17,3 +21,17 @@ R to reload shaders.
 
 Compile using cmake via CMakeLists.txt. 
 Run the executable from the top level directory.
+
+Rough Responsibilities:
+ - Santi Hevia
+Made a majority of the starter code. Created the environment. Worked on illumination. Created hero
+
+ - Jacob Yates
+Made hero; Implemented elevation.
+
+ - Matt Jackson
+Made hero; Texturing.
+
+4 days among us
+
+10: Very fun!
