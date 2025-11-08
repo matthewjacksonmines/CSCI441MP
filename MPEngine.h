@@ -11,7 +11,7 @@
 #include "Hero.h"
 #include "heroes/Daglas.h"
 #include "heroes/Paco.h"
-#include"heroes/Darrow.h"
+#include "heroes/Darrow.h"
 
 #include <vector>
 
@@ -25,6 +25,13 @@
  *
  * @author Santiago Hevia
  * @hero Marcos Rogelio De la Hoz
+ *
+ * @author Matthew Jackson
+ * @hero Griffon Petre
+ *
+ * @author Jacob Yates
+ * @hero Darrow
+ *
  */
 
 class MPEngine final : public CSCI441::OpenGLEngine {
@@ -279,18 +286,19 @@ private:
 
 
     // ========================= SKYBOX ADDITIONS (new) =========================
-    // separate shader for cubemap skybox
+
+    /// Separate shader for cubemap skybox
     CSCI441::ShaderProgram* _skyboxProg = nullptr;
     struct SkyU {
         GLint uVP;     // mat4
         GLint uCube;   // samplerCube
     } _skyU{};
 
-    // cube geometry (unit cube)
+    /// Cube geometry (unit cube)
     GLuint _skyVAO = 0, _skyVBO = 0, _skyIBO = 0;
     GLsizei _skyIndexCount = 0;
 
-    // cubemap texture handle
+    /// Cubemap texture handle
     GLuint _skyCubemap = 0;
 
     // helpers

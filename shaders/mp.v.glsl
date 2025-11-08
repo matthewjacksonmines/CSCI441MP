@@ -67,7 +67,7 @@ layout(location = 1) in vec3 vertexNormal;
 // ------------------------ Varying outputs ------------------------|
 
 // Color to apply to this vertex
-layout(location = 0) out vec3 color;
+out vec3 color;
 
 
 void main() {
@@ -129,9 +129,9 @@ void main() {
     // ========================= SPOTLIGHT =========================|
 
     // Angular cutoff of the spotlight beam
-    const float spot_innerCos = cos(radians(15.0)), spot_outerCos = cos(radians(25.0));
+    const float spot_innerCos = cos(radians(25.0)), spot_outerCos = cos(radians(40.0));
     // Spotlight attenuation coefficients (constant, linear and quadratic)
-    const float spot_const_atten = 1.0, spot_linear_atten = 0.09, spot_quad_atten = 0.032;
+    const float spot_const_atten = 1.0, spot_linear_atten = 0.02, spot_quad_atten = 0.001;
 
     // Diffuse Illumination
     vec3 spot_distanceVector = spot_lightPosition - worldPosition;

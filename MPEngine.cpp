@@ -24,6 +24,13 @@
  *
  * @author Santiago Hevia
  * @hero Marcos Rogelio De la Hoz
+ *
+ * @author Matthew Jackson
+ * @hero Griffon Petre
+ *
+ * @author Jacob Yates
+ * @hero Darrow
+ *
  */
 
 //************************************************************************************
@@ -43,7 +50,7 @@ GLfloat getRand() {
 MPEngine::MPEngine()
     : CSCI441::OpenGLEngine(4, 1,
                             768, 576,
-                            "MP : (._.)"),
+                            "MP (:-D)"),
       _mousePosition( {MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED} ),
       _leftMouseButtonState(GLFW_RELEASE),
       _arcballCam(nullptr),
@@ -368,7 +375,7 @@ void MPEngine::_generateEnvironment() {
     for(int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) {
         for(int j = BOTTOM_END_POINT; j < TOP_END_POINT; j += GRID_SPACING_LENGTH) {
 
-            // ----------------pla------- GRASS GENERATION -----------------------
+            // ----------------------- GRASS GENERATION -----------------------
             if( i % 2 && j % 2 && getRand() < 0.05f ) {
                 // Move to random position
                 glm::mat4 positionMatrix = glm::translate( glm::mat4(1.0), glm::vec3(i, -0.35f, j) );
@@ -387,7 +394,7 @@ void MPEngine::_generateEnvironment() {
             }
 
             // ----------------------- TREE GENERATION -----------------------
-            if( i % 2 && j % 2 && getRand() < 0.02f ) {
+            if( i % 2 && j % 2 && getRand() < 0.01f ) {
                 // Moving to random position
                 glm::mat4 positionMatrix = glm::translate( glm::mat4(1.0), glm::vec3(j, 0.0f, i) );
                 // Computing a random height
@@ -480,12 +487,14 @@ void MPEngine::mSetupScene() {
     _heroes.push_back({_petre, initialPosition, yaw, pitch, heroModelMtx, blinkTime});
 
     // Initializing the position and size of the heroes.
+    int i = 1;
     for (HeroData& hero : _heroes) {
         glm::mat4 modelMatrix(1.0f);
-        glm::vec3 position = {hero.heroPosition.x + 5.0, hero.heroPosition.y, hero.heroPosition.z};
+        glm::vec3 position = {hero.heroPosition.x + (i * 7.0), hero.heroPosition.y, hero.heroPosition.z};
         modelMatrix = glm::translate(modelMatrix, position);
         modelMatrix = glm::scale(modelMatrix, glm::vec3(5.0f));
         hero.modelMatrix = modelMatrix;
+        i++;
     }
 
     // Getting the first hero from the list.
@@ -516,7 +525,7 @@ void MPEngine::_setLightingParameters() {
                         glm::value_ptr(dir_lightColor));                 // Start of the data
 
     // Point light
-    sunPosition = {0.0f, 50.0f, 50.0f};
+    sunPosition = {0.0f, 150.0f, 50.0f};
     glm::vec3 point_lightPosition = sunPosition; // Position of our sun
     glm::vec3 point_lightColor = {1, 0.882, 0.765}; // Orange light
 
@@ -531,9 +540,9 @@ void MPEngine::_setLightingParameters() {
                         glm::value_ptr(point_lightColor));                // Start of the data
 
     // Spotlight
-    glm::vec3 spot_lightPosition = {0.0, 15.0, 0.0};
+    glm::vec3 spot_lightPosition = {0.0, 15.0, 0.0}; // initial position
     glm::vec3 spot_lightDirection = {0, -1, 0};
-    glm::vec3 spot_lightColor = {1, 0.8, 0.8};
+    glm::vec3 spot_lightColor = {1, 0.777, 0.777}; // Light red
 
     glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),    // Program handle
                         _lightingShaderUniformLocations.spot_lightPosition,  // Uniform location
@@ -625,7 +634,7 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
     // ---------------------- SKYBOX FIRST (new) ----------------------
     _drawSkybox(viewMtx, projMtx);
 
-    // use our lighting shader program
+    // Using our lighting shader program
     _lightingShaderProgram->useProgram();
 
     /// ---------------------------- DRAWING GROUND ----------------------------
@@ -640,7 +649,7 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
     glBindVertexArray(_groundVAO);
     glDrawElements(GL_TRIANGLE_STRIP, _numGroundPoints, GL_UNSIGNED_SHORT, (void*)0);
 
-    //Draw hill
+    // Drawing hill
     const glm::mat4 hillModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_SIZE * 0.5, -WORLD_SIZE*0.25f, WORLD_SIZE * 0.5));
     _computeAndSendMatrixUniforms(hillModelMtx, viewMtx, projMtx);
     _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.materialColor, groundColor);
@@ -651,6 +660,7 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
 
     /// ---------------------------- DRAWING WORLD ----------------------------
 
+    // Drawing sun
     drawSun(viewMtx, projMtx);
 
     // Drawing grass
@@ -659,9 +669,9 @@ void MPEngine::_renderScene(const glm::mat4& viewMtx, const glm::mat4& projMtx) 
     }
 
     // Drawing trees
-    // /*for( const TreeData& newTree : _trees ) {
-    //     drawTree(newTree, viewMtx, projMtx);
-    // }*/
+    for( const TreeData& newTree : _trees ) {
+         drawTree(newTree, viewMtx, projMtx);
+    }
 
     /// ---------------------------- DRAWING HEROES ----------------------------
 
@@ -827,7 +837,6 @@ void MPEngine::_updateScene() {
     HeroData& currentHero = _heroes[heroIndex];
     glm::mat4 heroModelMatrix(1.0f);
 
-
     heroModelMatrix = glm::translate(heroModelMatrix, currentHero.heroPosition);
 
     /** Sphere math
@@ -972,6 +981,16 @@ void MPEngine::_updateScene() {
 
     // [----------- grass swaying -----------]
     swayGrass();
+
+
+    glm::vec3 spotlightPosition = {_heroes[heroIndex].heroPosition.x,
+                                   _heroes[heroIndex].heroPosition.y + 10.0,
+                                   _heroes[heroIndex].heroPosition.z};
+    // Setting the spotlight above the hero position.
+    glProgramUniform3fv(_lightingShaderProgram->getShaderProgramHandle(),
+                        _lightingShaderUniformLocations.spot_lightPosition,
+                        1,
+                        glm::value_ptr(spotlightPosition));
 
 
     // Bound checking the hero position.
@@ -1134,7 +1153,7 @@ void MPEngine::run() {
 
 // ============================= SKYBOX IMPLEMENTATION (new) =============================
 void MPEngine::_setupSkybox() {
-    // unit cube (positions only) (we could also just generate this if we think this is too ugly)
+    // Unit cube (positions only) (We could have generated this, it looks a bit ugly)
     const glm::vec3 verts[] = {
         {-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1},
         { 1,-1,-1}, {-1,-1,-1}, {-1, 1,-1}, { 1, 1,-1},
@@ -1143,6 +1162,7 @@ void MPEngine::_setupSkybox() {
         {-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1},
         { 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1},
     };
+
     const GLushort idx[] = {
         0,1,2,      2,3,0,
         4,5,6,      6,7,4,
@@ -1151,6 +1171,7 @@ void MPEngine::_setupSkybox() {
         16,17,18,   18,19,16,
         20,21,22,   22,23,20
     };
+
     _skyIndexCount = sizeof(idx)/sizeof(GLushort);
 
     glGenVertexArrays(1, &_skyVAO);
@@ -1162,11 +1183,11 @@ void MPEngine::_setupSkybox() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _skyIBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, GL_STATIC_DRAW);
 
-    // position at location 0 for skybox shader
+    // Position at location 0 for skybox shader.
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
-    // load cubemap images
+    // Load cube-map images
     std::vector<std::string> faces = {
         "assets/skybox/right.jpg",
         "assets/skybox/left.jpg",
@@ -1179,13 +1200,13 @@ void MPEngine::_setupSkybox() {
 }
 
 
-/// @brief Load the 
-/// @param faces 
+/// @brief Loads the skybox images given the list of filename.
+/// @param faces : list of the image filenames.
 void MPEngine::_loadSkyboxCubemap(const std::vector<std::string>& faces) {
     glGenTextures(1, &_skyCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, _skyCubemap);
 
-    // For cubemaps, DO NOT flip vertically
+    // For cube-maps, DO NOT flip vertically
     stbi_set_flip_vertically_on_load(false);
 
     int w=0,h=0,c=0;
@@ -1202,7 +1223,7 @@ void MPEngine::_loadSkyboxCubemap(const std::vector<std::string>& faces) {
 
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    // Make sure the map spans the whole face
+    // Making sure the map spans the whole face.
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -1211,7 +1232,7 @@ void MPEngine::_loadSkyboxCubemap(const std::vector<std::string>& faces) {
 }
 
 void MPEngine::_drawSkybox(const glm::mat4& viewMtx, const glm::mat4& projMtx) const {
-    if(!_skyboxProg || !_skyCubemap) return; // Probably wont happen
+    if(!_skyboxProg || !_skyCubemap) return; // Probably will not happen
 
     // View matrix without translation so the skybox stays centered
     glm::mat4 V = glm::mat4(glm::mat3(viewMtx));
@@ -1230,7 +1251,7 @@ void MPEngine::_drawSkybox(const glm::mat4& viewMtx, const glm::mat4& projMtx) c
     glBindVertexArray(_skyVAO);
     glDrawElements(GL_TRIANGLES, _skyIndexCount, GL_UNSIGNED_SHORT, (void*)0);
 
-    // restore
+    // Restore
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
 }
