@@ -1136,6 +1136,17 @@ void MPEngine::run() {
             int pipX = framebufferWidth - pipWidth - 10;
             int pipY = 10;
             glViewport(pipX, pipY, pipWidth, pipHeight);
+
+            // Clear the depth buffer just at the PiP location
+            glEnable(GL_SCISSOR_TEST);
+            
+            glScissor(pipX, pipY, pipWidth, pipHeight); // Set the scissor rectangle
+
+            // ASSUMING glDepthMask(GL_TRUE); has been restored any time it was disabled
+            glClear(GL_DEPTH_BUFFER_BIT); // Clear only the depth buffer in that region
+            
+            glDisable(GL_SCISSOR_TEST);
+
             // Drawing everything to the small window, except the hero being controlled.
             _firstPersonView = true;
             _renderScene(_firstPersonCam->getViewMatrix(), _firstPersonCam->getProjectionMatrix());
